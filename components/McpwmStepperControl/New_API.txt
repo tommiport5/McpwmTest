@@ -1,0 +1,61 @@
+#include "driver/mcpwm.h"
+#include "esp_intr_alloc.h"
+
+// Define the interrupt handler function
+void IRAM_ATTR mcpwm_isr_handler(void *arg)
+{
+    // Handle the MCPWM interrupt
+    // ...
+}
+
+void app_main()
+{
+    // Initialize MCPWM module
+    mcpwm_config_t pwm_config = {
+        .frequency = 1000,     // Set PWM frequency to 1kHz
+        .cmpr_a = 0,          // Set initial duty cycle of channel A
+        // ...
+    };
+    mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);
+
+    // Configure the fault signal to monitor the falling edge
+    mcpwm_fault_input_t fault_input = {
+        .mcpwm_unit = MCPWM_UNIT_0,                // Use MCPWM unit 0
+        .mcpwm_timer = MCPWM_TIMER_0,              // Use MCPWM timer 0
+        .gpio_num = MCPWM0A,                       // Monitor the MCPWM0A pin
+        .invert_signal = false,                     // Configure to detect falling edge
+    };
+    mcpwm_fault_input_enable(&fault_input);
+
+    // Enable the MCPWM fault interrupt
+    mcpwm_fault_interrupt_enable(MCPWM_UNIT_0, MCPWM_TIMER_0);
+
+    // Register the MCPWM interrupt handler
+    esp_intr_alloc(ETS_MCPWM_INTR_SOURCE, ESP_INTR_FLAG_IRAM, mcpwm_isr_handler, NULL, NULL);
+
+    // ...
+}
+
+
+#include "driver/mcpwm.h"
+#include "esp_intr_alloc.h"
+
+// Define the interrupt handler function
+void IRAM_ATTR mcpwm_isr_handler(void *arg)
+{
+    // Handle the MCPWM interrupt
+    // ...
+}
+
+void app_main()
+{
+    // ...
+
+    // Enable the MCPWM fault interrupt on the timer
+    mcpwm_fault_interrupt_enable(MCPWM_UNIT_0, MCPWM_TIMER_0);
+
+    // Register the MCPWM interrupt handler
+    esp_intr_alloc(ETS_MCPWM0_INTR_SOURCE, ESP_INTR_FLAG_IRAM, mcpwm_isr_handler, NULL, NULL);
+
+    // ...
+}
