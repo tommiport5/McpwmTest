@@ -152,9 +152,9 @@ void McpwmStepperControl::buildGen01() {
 }
 
 void McpwmStepperControl::begin() {
-	Operator[0].connectTimer(Timer);
-	Operator[1].connectTimer(Timer);
-	Operator[2].connectTimer(Timer);
+	ESP_ERROR_CHECK(Operator[0].connectTimer(Timer));
+	ESP_ERROR_CHECK(Operator[1].connectTimer(Timer));
+	ESP_ERROR_CHECK(Operator[2].connectTimer(Timer));
 	// normal operating mode
 	buildForward();
 	Timer.begin();
