@@ -21,6 +21,8 @@ extern "C" void app_main(void)
 	bool up = true;
 	int32_t speed = 25;
 
+	ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
+
 	LiftAxis.begin();
 	LiftAxis.setCurrentSpeed(speed);
 	LiftAxis.start();
