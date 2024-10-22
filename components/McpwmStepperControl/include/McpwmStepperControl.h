@@ -97,8 +97,8 @@ private:
 	int _error_relay;
 	int _debounce;
 	McpwmTimer Timer;
-	McpwmOperator Operator[3];
-	McpwmComparator Comparator[3];
+	McpwmOperator Operator[4];
+	McpwmComparator Comparator[5];
 	McpwmGenerator Generator[6];
 
 	void buildForward();

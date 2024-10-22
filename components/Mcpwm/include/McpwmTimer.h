@@ -20,7 +20,7 @@ using namespace std::chrono_literals;
 
 class McpwmComparator;
 
-typedef McpwmComparator (*Comps_t)[3];
+typedef McpwmComparator (*Comps_t)[5];
 
 // ! MCPWM_LL_MAX_COUNT_VALUE = 0xffff
 

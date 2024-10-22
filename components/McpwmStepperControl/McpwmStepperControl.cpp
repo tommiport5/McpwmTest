@@ -25,11 +25,12 @@ McpwmStepperControl::McpwmStepperControl(gpio_num_t In1, gpio_num_t In2,
 			: _reverse(false), _In1(In1), _In2(In2), _EnA(EnA), _In3(In3), _In4(In4), _EnB(EnB), _CapPin(CapPin), _RefPin(RefPin),
 			 _GroupID(GroupID), _direction(false), _error_relay(0), _debounce(0),
 			 Timer(GroupID),
-			 Operator{McpwmOperator(GroupID), McpwmOperator(GroupID), McpwmOperator(GroupID)},
-			 Comparator{McpwmComparator(Operator[0]), McpwmComparator(Operator[1]), McpwmComparator(Operator[2])},
+			 Operator{McpwmOperator(GroupID), McpwmOperator(GroupID), McpwmOperator(GroupID), McpwmOperator(GroupID)},
+			 Comparator{McpwmComparator(Operator[0]), McpwmComparator(Operator[1]), McpwmComparator(Operator[1]), McpwmComparator(Operator[3]), McpwmComparator(Operator[3])},
 			 Generator{McpwmGenerator(Operator[0], In1, 0), McpwmGenerator(Operator[0], In2, 1),
-				 McpwmGenerator(Operator[1], In3, 0), McpwmGenerator(Operator[1], In4, 1),
-				 McpwmGenerator(Operator[2], EnA, 0), McpwmGenerator(Operator[2], EnB, 0) }
+				 McpwmGenerator(Operator[1], EnA, 0),
+				 McpwmGenerator(Operator[2], In3, 0), McpwmGenerator(Operator[2], In4, 1),
+				 McpwmGenerator(Operator[3], EnB, 0) }
 {
 	setSpeeds(10, 150);	// set default values
 	_dp = GPIO_NUM_NC;
@@ -42,93 +43,58 @@ void McpwmStepperControl::setSpeeds(int32_t min, int32_t max) {
 }
 
 void McpwmStepperControl::buildForward() {
-// Generator 0
-	// State 0
-//	ESP_ERROR_CHECK(Generator[0].setActionOnTimerEvent(
-//			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
-//			));
-	ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(Generator[0].getHandle(),
-				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[2].getHandle(), MCPWM_GEN_ACTION_LOW)));
-	ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(Generator[0].getHandle(),
-				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[1].getHandle(), MCPWM_GEN_ACTION_HIGH)));
-//	ESP_ERROR_CHECK(Generator[0].setActionsOnCompareEvents(
-//				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[0].getHandle(), MCPWM_GEN_ACTION_HIGH),
-//				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[1].getHandle(), MCPWM_GEN_ACTION_LOW),
-//				MCPWM_GEN_COMPARE_EVENT_ACTION_END()
-//			));
-// Generator 1
-	// State 0
-	ESP_ERROR_CHECK(Generator[1].setActionsOnTimerEvents(
+// Generator 0: A
+	ESP_ERROR_CHECK(Generator[0].setActionOnTimerEvent(
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)	// redundant, should be high from prev. cycle
+			));
+	ESP_ERROR_CHECK(Generator[0].setActionsOnCompareEvents(
+				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[0].getHandle(), MCPWM_GEN_ACTION_LOW),
+				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[0].getHandle(), MCPWM_GEN_ACTION_HIGH),
+				MCPWM_GEN_COMPARE_EVENT_ACTION_END()
+			));
+// Generator 1: /A
+	ESP_ERROR_CHECK(Generator[1].setActionOnTimerEvent(
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
+			));
+	ESP_ERROR_CHECK(Generator[1].setActionsOnCompareEvents(
+				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[0].getHandle(), MCPWM_GEN_ACTION_LOW),
+				MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[0].getHandle(), MCPWM_GEN_ACTION_HIGH),
+				MCPWM_GEN_COMPARE_EVENT_ACTION_END()
+			));
+// Generator 2: AE
+	ESP_ERROR_CHECK(Generator[2].setActionOnTimerEvent(
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)	// redundant, should be high from prev. cycle
+			));
+	ESP_ERROR_CHECK(Generator[2].setActionsOnCompareEvents(
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[1].getHandle(), MCPWM_GEN_ACTION_LOW),
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[2].getHandle(), MCPWM_GEN_ACTION_HIGH),
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[2].getHandle(), MCPWM_GEN_ACTION_LOW),
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[1].getHandle(), MCPWM_GEN_ACTION_HIGH),
+			MCPWM_GEN_COMPARE_EVENT_ACTION_END()
+			));
+// Generator 3: B
+	ESP_ERROR_CHECK(Generator[3].setActionsOnTimerEvents(
 			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH),
-	// State 3
 			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_LOW),
 			MCPWM_GEN_TIMER_EVENT_ACTION_END()
 			));
-//	// State 2
-//	ESP_ERROR_CHECK(Generator[0].setActionsOnCompareEvent(
-//			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[0].getHandle(), MCPWM_GEN_ACTION_LOW),
-//	// State 6
-//			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[1].getHandle(), MCPWM_GEN_ACTION_HIGH),
-//			MCPWM_GEN_COMPARE_EVENT_ACTION_END()
-//			));
-// Generator 2
-	// State 0
-/*
-	ESP_ERROR_CHECK(Generator[2].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
+// Generator 4: /B
+	ESP_ERROR_CHECK(Generator[4].setActionsOnTimerEvents(
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH),
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_LOW),
+			MCPWM_GEN_TIMER_EVENT_ACTION_END()
 			));
-	// State 4
-	ESP_ERROR_CHECK(Generator[2].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_LOW)
+// Generator 5: /BE
+	ESP_ERROR_CHECK(Generator[5].setActionsOnTimerEvents(
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH),
+			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_HIGH),
+			MCPWM_GEN_TIMER_EVENT_ACTION_END()
 			));
-// Generator 3
-	// State 0
-	ESP_ERROR_CHECK(Generator[3].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
+	ESP_ERROR_CHECK(Generator[5].setActionsOnCompareEvents(
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[3].getHandle(), MCPWM_GEN_ACTION_LOW),
+			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[4].getHandle(), MCPWM_GEN_ACTION_LOW),
+			MCPWM_GEN_TIMER_EVENT_ACTION_END()
 			));
-	// State 4
-	ESP_ERROR_CHECK(Generator[2].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_LOW)
-			));
-// Generator 4
-	// State 0
-	ESP_ERROR_CHECK(Generator[4].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
-			));
-	// State 1
-	ESP_ERROR_CHECK(Generator[4].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[0].getHandle(), MCPWM_GEN_ACTION_LOW)
-			));
-	// State 2
-	ESP_ERROR_CHECK(Generator[4].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[1].getHandle(), MCPWM_GEN_ACTION_HIGH)
-			));
-	// State 5
-	ESP_ERROR_CHECK(Generator[4].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[2].getHandle(), MCPWM_GEN_ACTION_LOW)
-			));
-	//State 6
-	ESP_ERROR_CHECK(Generator[4].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[1].getHandle(), MCPWM_GEN_ACTION_HIGH)
-			));
-// Generator 5
-	// State 0
-	ESP_ERROR_CHECK(Generator[5].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)
-			));
-	// State 3
-	ESP_ERROR_CHECK(Generator[5].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, Comparator[2].getHandle(), MCPWM_GEN_ACTION_LOW)
-			));
-	// State 4
-	ESP_ERROR_CHECK(Generator[5].setActionOnTimerEvent(
-			MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_HIGH)
-			));
-	// State 7
-	ESP_ERROR_CHECK(Generator[5].setActionOnCompareEvent(
-			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, Comparator[0].getHandle(), MCPWM_GEN_ACTION_LOW)
-			));
-			*/
 }
 
 void McpwmStepperControl::buildReverse() {
@@ -155,6 +121,7 @@ void McpwmStepperControl::begin() {
 	ESP_ERROR_CHECK(Operator[0].connectTimer(Timer));
 	ESP_ERROR_CHECK(Operator[1].connectTimer(Timer));
 	ESP_ERROR_CHECK(Operator[2].connectTimer(Timer));
+	ESP_ERROR_CHECK(Operator[3].connectTimer(Timer));
 	// normal operating mode
 	buildForward();
 	Timer.begin();

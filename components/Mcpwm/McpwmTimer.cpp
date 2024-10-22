@@ -213,7 +213,9 @@ void McpwmTimer::stop(bool blocking/*=true*/) {
 }
 
 void McpwmTimer::setCompValues(uint32_t prd) {
-	ESP_ERROR_CHECK((*_pComps)[0].setValue(prd/8));
-	ESP_ERROR_CHECK((*_pComps)[1].setValue(prd/4));
-	ESP_ERROR_CHECK((*_pComps)[2].setValue(prd/8 + prd/4));
+	ESP_ERROR_CHECK((*_pComps)[0].setValue(prd/4));
+	ESP_ERROR_CHECK((*_pComps)[1].setValue(prd/8));
+	ESP_ERROR_CHECK((*_pComps)[2].setValue(prd/4));
+	ESP_ERROR_CHECK((*_pComps)[3].setValue(prd/8 + prd/4));
+	ESP_ERROR_CHECK((*_pComps)[4].setValue(prd/8));
 }
